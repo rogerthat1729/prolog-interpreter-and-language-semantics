@@ -4,7 +4,7 @@ type signature = symbol list
 
 type tree = V of string | C of { node: symbol ; children: tree list }
 
-type substitution = (tree * tree) list
+type substitution = (string * tree) list
 
 let rec check_sig s = 
   match s with
@@ -54,7 +54,7 @@ let rec mirror t =
 
 let rec subst sigma t =
   match t with
-  | V x -> (try List.assoc t sigma with Not_found -> t)
+  | V x -> (try List.assoc x sigma with Not_found -> t)
   | C {node = (a, b); children = l} -> C {node = (a, b); children = List.map (subst sigma) l}
 ;;
 
@@ -74,9 +74,9 @@ let rec print_chars ch indent =
 ;;
 let rec print_tree indent t =
   match t with
-  | V x -> print_chars " " (indent+2); print_string "|"; print_string "-Var "; print_string x; print_newline()
+  | V x -> print_chars " " indent; print_string "|"; print_string "-Var "; print_string x; print_newline()
   | C {node = (a, b); children = l} -> 
-    print_chars " " (indent+2); print_string "|"; print_string "-"; print_string a; print_newline();
+    print_chars " " indent; print_string "|"; print_string "-"; print_string a; print_newline();
     List.iter (fun x -> print_tree (indent+2) x) l
   ;;
   
@@ -85,7 +85,7 @@ let rec print_tree indent t =
 (* print_endline (string_of_bool (wftree t)) *)
 (* print_tree 0 t;;
 print_tree 0 (mirror t);; *)
-(* print_tree 0 (subst [(t3, t4)] t);; *)
+(* print_tree 0 (subst [("x", t4)] t);; *)
 (* print_tree 0 (subst [(t4, t3)] (subst [(t3, t4)] t));; *)
 (* print_tree 0 (compose_subst [(t3, t4)] [(t4, t1)] t);; *)
 
