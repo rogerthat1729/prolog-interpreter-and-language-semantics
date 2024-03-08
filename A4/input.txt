@@ -1,0 +1,8 @@
+harry(lily, false) :- james(Snape, Tom), sirius(ron(2), Hermione), Voldemort is 2.
+frodo(Bilbo).
+darth(vader) :- lightsaber(true).
+meal(X) :- food(23).
+popcorn(Movie) :- !.
+study(_) :- fail.
+x(a(X), b(X), c(d(X)), e(Y)) :- N is M+2, N1 is M1/3.
+?- a(b, c), S is "hello, world!".

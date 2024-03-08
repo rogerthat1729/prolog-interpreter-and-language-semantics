@@ -1,0 +1,15 @@
+let _th'E_n45 ="string";;
+let 'def= PQr+_ST-57jkl;;
+if a>"b" thentrue else false
+let pair("one", 00234): pair1;;
+pair1.first= "one" #first element
+let s = "abc"concat "def";
+@ This is how a multi-
+line comment works @
+let id1=23&34;
+let id2=21 mod 6;
+let id3  = 56|78Y*YT34+56;
+letid4 = true xor false;
+let id5 = 45>=ab23cd;
+let id6 = then<=if;
+let id7=5 + (63*  (46 -5))
