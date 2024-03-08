@@ -72,11 +72,20 @@ let rec mgu t1 t2 =
   | C r1, C r2 -> if r1.node <> r2.node then failwith "NOT_UNIFIABLE" else List.fold_left compose_subst [] (List.map2 mgu r1.children r2.children) 
 ;;
 
+let rec subset l1 l2 =
+  match l1 with
+  | [] -> true
+  | h::t -> (List.mem h l2) && (subset t l2)
+
+let list_equal l1 l2 = 
+  (subset l1 l2) && (subset l2 l1)
+;;
+
 let t3 = V "x";;
 let t4 = V "y";;  
 let t1 = C {node = ("b", 0); children = []};;
 let t2 = C {node = ("c", 1); children = [t1]};;
-let t5 = C {node = ("c", 1); children = [V "p"]};;
+let t5 = C {node = ("a", 2); children = [V "p"; V "q"]};;
 let t = C {node = ("a", 2) ; children = [t1;t2]};;
 
 let rec print_chars ch indent =
@@ -109,5 +118,9 @@ let print_list l =
 (* print_list([("x", t3); ("y", t4)]);; *)
 (* print_list([("a", t1); ("b", t2)]);; *)
 (* print_list(compose_subst [("x", t3); ("y", t4)] [("a", t2); ("b", t1)]);; *)
-(* print_list (mgu t5 t2);; *)
+(* print_list (mgu t5 t);; *)
+(* print_list (mgu (mirror t) (mirror t5));; *)
+(* print_string (string_of_bool (list_equal (mgu t5 t) (mgu (mirror t) (mirror t5))));; *)
+
+(* Write test cases for mgu and other functions *)
 
