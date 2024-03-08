@@ -52,19 +52,31 @@ let rec mirror t =
   | C {node = (a, b); children = l} -> C {node = (a, b); children = List.rev (List.map mirror l)}
 ;;
 
+let compose_subst sigma1 sigma2 = 
+  let sigma1_vars = List.map (fun (a, b) -> a) sigma1 in
+  let new_bindings = List.filter (fun (a, b) -> not(List.mem a sigma1_vars)) sigma2 in
+  sigma1 @ new_bindings
+;;
+
+
 let rec subst sigma t =
   match t with
   | V x -> (try List.assoc x sigma with Not_found -> t)
   | C {node = (a, b); children = l} -> C {node = (a, b); children = List.map (subst sigma) l}
 ;;
 
-let compose_subst sigma1 sigma2 t = subst sigma2 (subst sigma1 t)
+let rec mgu t1 t2 =
+  match t1, t2 with
+  | V x, V y -> if x = y then [] else [(x, V y)]
+  | V x, C r | C r, V x -> if (List.mem x (vars (C r))) then failwith "NOT_UNIFIABLE" else [(x, C r)]
+  | C r1, C r2 -> if r1.node <> r2.node then failwith "NOT_UNIFIABLE" else List.fold_left compose_subst [] (List.map2 mgu r1.children r2.children) 
 ;;
 
 let t3 = V "x";;
 let t4 = V "y";;  
 let t1 = C {node = ("b", 0); children = []};;
-let t2 = C {node = ("c", 1); children = [t3]};;
+let t2 = C {node = ("c", 1); children = [t1]};;
+let t5 = C {node = ("c", 1); children = [V "p"]};;
 let t = C {node = ("a", 2) ; children = [t1;t2]};;
 
 let rec print_chars ch indent =
@@ -72,6 +84,7 @@ let rec print_chars ch indent =
   | 0 -> ()
   | _ -> print_string ch; print_chars ch (indent-1)
 ;;
+
 let rec print_tree indent t =
   match t with
   | V x -> print_chars " " indent; print_string "|"; print_string "-Var "; print_string x; print_newline()
@@ -80,13 +93,21 @@ let rec print_tree indent t =
     List.iter (fun x -> print_tree (indent+2) x) l
   ;;
   
+let print_list l = 
+  match l with
+  | [] -> print_string "[]"
+  | _ -> List.iter (fun (a, b) -> print_string a; print_string "->\n"; print_tree 0 b) l
+;;
   
 (* print_endline (string_of_int (ht t3)) *)
 (* print_endline (string_of_bool (wftree t)) *)
-(* print_tree 0 t;;
-print_tree 0 (mirror t);; *)
+(* print_tree 0 t;; *)
+(* print_tree 0 (mirror t);; *)
 (* print_tree 0 (subst [("x", t4)] t);; *)
 (* print_tree 0 (subst [(t4, t3)] (subst [(t3, t4)] t));; *)
 (* print_tree 0 (compose_subst [(t3, t4)] [(t4, t1)] t);; *)
-
+(* print_list([("x", t3); ("y", t4)]);; *)
+(* print_list([("a", t1); ("b", t2)]);; *)
+(* print_list(compose_subst [("x", t3); ("y", t4)] [("a", t2); ("b", t1)]);; *)
+(* print_list (mgu t5 t2);; *)
 
