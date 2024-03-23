@@ -202,3 +202,20 @@ true
 
 (* print_ans test4;; *)
 
+(* Test 5: Fst *)
+let test5 =
+  let expr = Fst(Pair(N(1), B(true))) in
+  let opcodes = compile expr in
+  execute [] [] opcodes []
+;;
+(* Expected output: 1 *)
+(* print_ans test5;; *)
+
+(* Test 6: Snd *)
+let test6 =
+  let expr = Snd(Pair(N(1), B(true))) in
+  let opcodes = compile expr in
+  execute [] [] opcodes []
+;;
+(* Expected output: true *)
+(* print_ans test6;; *)
