@@ -1,3 +1,6 @@
+(* To add - case statements, definitions(if possible), variable length tuples and their projections *)
+(* Can make a lexer and parser for better quality *)
+
 type exp = 
 | V of string 
 | Abs of string*exp 
@@ -59,7 +62,7 @@ type stack = ans list
 type dump = (stack*(table)*(opcode list)) list
 ;;
 
-let rec compile (e:exp) =
+let rec compile e =
 match e with
 | V x -> [LOOKUP x]
 | Abs (x, e) -> [MKCLOS (x, (compile e)@[RET])]
@@ -89,12 +92,12 @@ exception CompilationError of stack*table*(opcode list)*dump
 exception DivbyZero of stack*table*(opcode list)*dump
 ;;
 
-let rec execute (stk:stack) (gamma:table) (comp:opcode list) (dmp:dump) =
+let rec execute stk gamma comp dmp =
   match stk, gamma, comp, dmp with
   | x::xs, _, [], [] -> x
   | a::s1, _, RET::_, (s, g, c)::d -> execute (a::s) g c d
   | s, g, (LOOKUP x)::c, d -> execute ((try List.assoc x g with Not_found -> raise (SegFault (stk, gamma, comp, dmp)))::s) g c d
-  | s, g, MKCLOS (x, c1)::c2, d -> execute ((VClos (x,c1,g))::s) g c2 d
+  | s, g, (MKCLOS (x, c1))::c2, d -> execute ((VClos (x,c1,g))::s) g c2 d
   | a::(VClos (x,c1,g1))::s, g, APP::c2, d -> execute [] ((x, a)::g1) c1 ((s, g, c2)::d)
   | s, g, (LDNUM n)::c, d -> execute ((N n)::s) g c d
   | s, g, (LDBOOL b)::c, d -> execute ((B b)::s) g c d
@@ -113,7 +116,7 @@ let rec execute (stk:stack) (gamma:table) (comp:opcode list) (dmp:dump) =
   | (B b2)::(B b1)::s, g, AND::c, d -> execute ((B (b1 && b2))::s) g c d
   | (B b2)::(B b1)::s, g, OR::c, d -> execute ((B (b1 || b2))::s) g c d
   | (B b)::s, g, NOT::c, d -> execute ((B (not b))::s) g c d
-  | (B b)::s, g, IF(c1, c2)::c, d -> 
+  | (B b)::s, g, (IF(c1, c2))::c, d -> 
     (
       match b with
       | true -> execute s g (c1@c) d
@@ -125,7 +128,7 @@ let rec execute (stk:stack) (gamma:table) (comp:opcode list) (dmp:dump) =
   | _, _, _, _ -> raise (CompilationError (stk, gamma, comp, dmp))
 ;;
 
-let rec print_opcode_list (l:opcode list) = 
+let rec print_opcode_list l = 
   match l with
   | [] -> ()
   | LOOKUP x::t -> print_string "LOOKUP "; print_string x; print_string "\n"; print_opcode_list t
@@ -149,73 +152,83 @@ let rec print_opcode_list (l:opcode list) =
   | FST::t -> print_string "FST\n"; print_opcode_list t
   | SND::t -> print_string "SND\n"; print_opcode_list t
 
-let rec print_ans (a:ans) =
+let rec print_ans a =
   match a with
   | N n -> print_int n; print_string "\n"
   | B b -> print_string (string_of_bool b); print_string "\n";
   | P (a1, a2) -> print_string "Pair:\n"; print_ans a1; print_ans a2;
-  | VClos (x, c, g) -> print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c; print_string "Table\n";
+  | VClos (x, c, g) -> print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c;
+;;
+
+let run test =
+  let opcodes = compile test in
+  print_ans (execute [] [] opcodes [])
 ;;
 
 (* Test 1: Simple function application *)
-let test1 = 
-  let expr = App(Abs("x", Add(V("x"), N(2))), N(3)) in
-  let opcodes = compile expr in
-  execute [] [] opcodes []
-;;
+run (App(Abs("x", Add(V("x"), N(2))), N(3)));;
 (* Expected output: 5 *)
 
-(* print_ans test1 ;; *)
-
 (* Test 2: Nested function application *)
-
-let test2 = 
-  let expr = App(Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))), N(5)) in
-  let opcodes = compile expr in
-  execute [] [] opcodes []
-;;
+run (App(Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))), N(5)));;
 (* Expected output: 35 *)
 
-(* print_ans test2 ;; *)
-
 (* Test 3: If-else statement *)
-let test3 =
-  let expr = If(Gt(N(5), N(3)), N(1), N(0)) in
-  let opcodes = compile expr in
-  execute [] [] opcodes []
-;;
+run (If(Gt(N(5), N(3)), N(1), N(0)));;
 (* Expected output: 1 *)
 
-(* print_ans test3;; *)
-
 (* Test 4: Pair *)
-let test4 =
-  let expr = Pair(N(1), B(true)) in
-  let opcodes = compile expr in
-  execute [] [] opcodes []
-;;
+run (Pair(N(1), B(true)));;
 (* Expected output:  
 Pair:
 1
 true
 *)
 
-(* print_ans test4;; *)
-
 (* Test 5: Fst *)
-let test5 =
-  let expr = Fst(Pair(N(1), B(true))) in
-  let opcodes = compile expr in
-  execute [] [] opcodes []
-;;
+run (Fst(Pair(N(1), B(true))));;
 (* Expected output: 1 *)
-(* print_ans test5;; *)
 
 (* Test 6: Snd *)
-let test6 =
-  let expr = Snd(Pair(N(1), B(true))) in
-  let opcodes = compile expr in
-  execute [] [] opcodes []
-;;
+run (Snd(Pair(N(1), B(true))));;
 (* Expected output: true *)
-(* print_ans test6;; *)
+
+(* Test 7: Closure *)
+run (Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))));;
+(* Expected output:
+Closure:
+Argument:
+x
+Opcode List:
+MKCLOS y
+LOOKUP x
+LOOKUP y
+MUL
+RET
+LDNUM 7
+APP
+RET
+*)
+
+(* Test 8: Nested closure *)
+run (Abs("x", App(Abs("y", App(Abs("z", Mul(V("x"), Mul(V("y"), V("z")))), N(7))), N(5))));;
+(* Expected output:
+Closure:
+Argument:
+x
+Opcode List:
+MKCLOS y
+MKCLOS z
+LOOKUP x
+LOOKUP y
+LOOKUP z
+MUL
+MUL
+RET
+LDNUM 7
+APP
+RET
+LDNUM 5
+APP
+RET
+*)
