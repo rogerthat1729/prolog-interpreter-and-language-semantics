@@ -1,4 +1,4 @@
-(* To add - case statements, definitions(if possible), variable length tuples and their projections *)
+(* To add - definitions(if possible)*)
 (* Can make a lexer and parser for better quality *)
 
 type exp = 
@@ -18,9 +18,9 @@ type exp =
 | Or of exp*exp 
 | Not of exp 
 | If of exp*exp*exp
-| Pair of exp*exp 
-| Fst of exp 
-| Snd of exp 
+| Tuple of (exp list)*int
+| Proj of exp*int
+| Case of exp*((exp*exp) list)
 ;;
 
 type opcode = 
@@ -41,15 +41,15 @@ type opcode =
 | OR
 | NOT
 | IF of (opcode list) * (opcode list)
-| PAIR
-| FST
-| SND
+| TUPLE of int
+| PROJ of int
+| CASE of ((opcode list)*(opcode list)) list
 ;;
 
 type ans =
 | N of int
 | B of bool
-| P of ans*ans
+| T of ans list
 | VClos of string*(opcode list)*((string*ans) list)
 ;;
 
@@ -65,7 +65,7 @@ type dump = (stack*(table)*(opcode list)) list
 let rec compile e =
 match e with
 | V x -> [LOOKUP x]
-| Abs (x, e) -> [MKCLOS (x, (compile e)@[RET])]
+| Abs (x, e1) -> [MKCLOS (x, (compile e1)@[RET])]
 | App (e1, e2) -> (compile e1)@(compile e2)@[APP]
 | N n -> [LDNUM n]
 | B b -> [LDBOOL b]
@@ -78,19 +78,24 @@ match e with
 | Lt (e1, e2) -> (compile e1)@(compile e2)@[LT]
 | And (e1, e2) -> (compile e1)@(compile e2)@[AND]
 | Or (e1, e2) -> (compile e1)@(compile e2)@[OR]
-| Not e -> (compile e)@[NOT]
+| Not e1 -> (compile e1)@[NOT]
 | If (e1, e2, e3) -> (compile e1)@[IF(compile e2, compile e3)]
-| Pair (e1, e2) -> (compile e1)@(compile e2)@[PAIR]
-| Fst e -> (compile e)@[FST]
-| Snd e -> (compile e)@[SND]
+| Tuple (l, n) -> 
+(
+  if n > 0 then (List.fold_left (@) [] (List.map (compile) l))@[TUPLE n]
+  else failwith "Compilation Error"
+)
+| Proj (e1, n) -> compile(e1)@[PROJ n]
+| Case (e, l) -> (compile e)@[CASE (List.map (fun (a, b)->(compile a, compile b)) l)]
 ;;
 
 exception SegFault of stack*table*(opcode list)*dump
 ;;
-exception CompilationError of stack*table*(opcode list)*dump
+exception ExecutionError of stack*table*(opcode list)*dump
 ;;
 exception DivbyZero of stack*table*(opcode list)*dump
 ;;
+
 
 let rec execute stk gamma comp dmp =
   match stk, gamma, comp, dmp with
@@ -122,10 +127,37 @@ let rec execute stk gamma comp dmp =
       | true -> execute s g (c1@c) d
       | false -> execute s g (c2@c) d
     )
-  | a2::a1::s, g, PAIR::c, d -> execute ((P (a1, a2))::s) g c d
-  | (P (a1, a2))::s, g, FST::c, d -> execute (a1::s) g c d
-  | (P (a1, a2))::s, g, SND::c, d -> execute (a2::s) g c d
-  | _, _, _, _ -> raise (CompilationError (stk, gamma, comp, dmp))
+  | s, g, (TUPLE n)::c, d -> 
+    (
+      if List.length s < n then raise (ExecutionError (stk, gamma, comp, dmp))
+      else
+      (
+        let rec split_at n lst =
+          match n, lst with
+          | _, [] -> ([], [])
+          | 0, _ -> ([], lst)
+          | n, x :: xs ->
+              let (left, right) = split_at (n-1) xs in
+              (x :: left, right)
+          in
+        let s1, s2 = split_at n s in
+        execute ((T (List.rev s1))::s2) g c d
+      )
+    )
+  | (T l)::s, g, (PROJ n)::c, d -> 
+    (
+      if (n > List.length l) || (n <= 0) then
+        failwith "Invalid projection index"
+      else
+        execute ((List.nth l (n-1))::s) g c d
+    )
+  | a1::s, g, (CASE l)::c, d -> 
+    (
+      let calculated_list = List.map (fun (a, b) -> ((execute [] g a []), b)) l in
+      let correct_opcodes = try List.assoc a1 calculated_list with Not_found -> failwith "No matching value" in
+      execute s g (correct_opcodes@c) d
+    )
+  | _, _, _, _ -> raise (ExecutionError (stk, gamma, comp, dmp))
 ;;
 
 let rec print_opcode_list l = 
@@ -148,15 +180,16 @@ let rec print_opcode_list l =
   | OR::t -> print_string "OR\n"; print_opcode_list t
   | NOT::t -> print_string "NOT\n"; print_opcode_list t
   | IF (c1, c2)::t -> print_string "IF:\n"; print_opcode_list c1; print_opcode_list c2; print_opcode_list t
-  | PAIR::t -> print_string "PAIR\n"; print_opcode_list t
-  | FST::t -> print_string "FST\n"; print_opcode_list t
-  | SND::t -> print_string "SND\n"; print_opcode_list t
+  | (TUPLE n)::t -> Printf.printf "TUPLE with length '%d'\n" n;
+  | (PROJ n)::t -> Printf.printf "PROJECTION with index '%d\n" n;
+  | (CASE l)::t -> print_string "CASE:\nBegin\n"; List.iter (fun (a, b)-> print_opcode_list a; print_opcode_list b) l; print_string "End\n"
+;;
 
 let rec print_ans a =
   match a with
   | N n -> print_int n; print_string "\n"
   | B b -> print_string (string_of_bool b); print_string "\n";
-  | P (a1, a2) -> print_string "Pair:\n"; print_ans a1; print_ans a2;
+  | T l -> print_string "Tuple:\nBegin\n"; List.iter (print_ans) l; print_string "End\n";
   | VClos (x, c, g) -> print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c;
 ;;
 
@@ -177,23 +210,21 @@ run (App(Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))), N(5)));;
 run (If(Gt(N(5), N(3)), N(1), N(0)));;
 (* Expected output: 1 *)
 
-(* Test 4: Pair *)
-run (Pair(N(1), B(true)));;
+(* Test 4: Tuple *)
+run (Tuple([N(1); B(true)], 2));;
 (* Expected output:  
-Pair:
+Tuple:
+Begin
 1
 true
+End
 *)
 
-(* Test 5: Fst *)
-run (Fst(Pair(N(1), B(true))));;
-(* Expected output: 1 *)
-
-(* Test 6: Snd *)
-run (Snd(Pair(N(1), B(true))));;
+(* Test 5: Proj *)
+run (Proj(Tuple([N(1); B(true)], 2), 2));;
 (* Expected output: true *)
 
-(* Test 7: Closure *)
+(* Test 6: Closure *)
 run (Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))));;
 (* Expected output:
 Closure:
@@ -210,7 +241,7 @@ APP
 RET
 *)
 
-(* Test 8: Nested closure *)
+(* Test 7: Nested closure *)
 run (Abs("x", App(Abs("y", App(Abs("z", Mul(V("x"), Mul(V("y"), V("z")))), N(7))), N(5))));;
 (* Expected output:
 Closure:
@@ -232,3 +263,7 @@ LDNUM 5
 APP
 RET
 *)
+
+(* Test 8: Case Statement *)
+run (Case(App(Abs("x", Add(V("x"), N(2))), N(3)), [((N 7), (B true));((N 5), (B false))]));;
+(* Expected output: false *)
