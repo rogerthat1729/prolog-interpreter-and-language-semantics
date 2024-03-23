@@ -46,7 +46,7 @@ type opcode =
 type ans =
 | N of int
 | B of bool
-| Pair of ans*ans
+| P of ans*ans
 | VClos of string*(opcode list)*((string*ans) list)
 ;;
 
@@ -119,10 +119,42 @@ let rec execute (stk:stack) (gamma:table) (comp:opcode list) (dmp:dump) =
       | true -> execute s g (c1@c) d
       | false -> execute s g (c2@c) d
     )
-  | a2::a1::s, g, PAIR::c, d -> execute ((Pair (a1, a2))::s) g c d
-  | (Pair (a1, a2))::s, g, FST::c, d -> execute (a1::s) g c d
-  | (Pair (a1, a2))::s, g, SND::c, d -> execute (a2::s) g c d
+  | a2::a1::s, g, PAIR::c, d -> execute ((P (a1, a2))::s) g c d
+  | (P (a1, a2))::s, g, FST::c, d -> execute (a1::s) g c d
+  | (P (a1, a2))::s, g, SND::c, d -> execute (a2::s) g c d
   | _, _, _, _ -> raise (CompilationError (stk, gamma, comp, dmp))
+;;
+
+let rec print_opcode_list (l:opcode list) = 
+  match l with
+  | [] -> ()
+  | LOOKUP x::t -> print_string "LOOKUP "; print_string x; print_string "\n"; print_opcode_list t
+  | MKCLOS (x, c)::t -> print_string "MKCLOS "; print_string x; print_string "\n"; print_opcode_list c; print_opcode_list t
+  | APP::t -> print_string "APP\n"; print_opcode_list t
+  | RET::t -> print_string "RET\n"; print_opcode_list t
+  | LDNUM n::t -> print_string "LDNUM "; print_int n; print_string "\n"; print_opcode_list t
+  | LDBOOL b::t -> print_string "LDBOOL "; print_string (string_of_bool b); print_string "\n"; print_opcode_list t
+  | ADD::t -> print_string "ADD\n"; print_opcode_list t
+  | SUB::t -> print_string "SUB\n"; print_opcode_list t
+  | MUL::t -> print_string "MUL\n"; print_opcode_list t
+  | DIV::t -> print_string "DIV\n"; print_opcode_list t
+  | EQ::t -> print_string "EQ\n"; print_opcode_list t
+  | GT::t -> print_string "GT\n"; print_opcode_list t
+  | LT::t -> print_string "LT\n"; print_opcode_list t
+  | AND::t -> print_string "AND\n"; print_opcode_list t
+  | OR::t -> print_string "OR\n"; print_opcode_list t
+  | NOT::t -> print_string "NOT\n"; print_opcode_list t
+  | IF (c1, c2)::t -> print_string "IF:\n"; print_opcode_list c1; print_opcode_list c2; print_opcode_list t
+  | PAIR::t -> print_string "PAIR\n"; print_opcode_list t
+  | FST::t -> print_string "FST\n"; print_opcode_list t
+  | SND::t -> print_string "SND\n"; print_opcode_list t
+
+let rec print_ans (a:ans) =
+  match a with
+  | N n -> print_int n; print_string "\n"
+  | B b -> print_string (string_of_bool b); print_string "\n";
+  | P (a1, a2) -> print_string "Pair:\n"; print_ans a1; print_ans a2;
+  | VClos (x, c, g) -> print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c; print_string "Table\n";
 ;;
 
 (* Test 1: Simple function application *)
@@ -130,18 +162,43 @@ let test1 =
   let expr = App(Abs("x", Add(V("x"), N(2))), N(3)) in
   let opcodes = compile expr in
   execute [] [] opcodes []
-(* Expected output: N 5 *)
-
-let rec print_ans (a:ans) =
-  match a with
-  | N n -> print_int n; print_string "\n"
-  | B b -> print_string (string_of_bool b); print_string "\n";
-  | Pair (a1, a2) -> print_string "("; print_ans a1; print_string ", "; print_ans a2; print_string ")"; print_string "\n";
-  | VClos (x, c, g) -> print_string "<closure>"; print_string "\n";
 ;;
+(* Expected output: 5 *)
 
-print_ans test1
-;;
+(* print_ans test1 ;; *)
+
 (* Test 2: Nested function application *)
 
+let test2 = 
+  let expr = App(Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))), N(5)) in
+  let opcodes = compile expr in
+  execute [] [] opcodes []
+;;
+(* Expected output: 35 *)
+
+(* print_ans test2 ;; *)
+
+(* Test 3: If-else statement *)
+let test3 =
+  let expr = If(Gt(N(5), N(3)), N(1), N(0)) in
+  let opcodes = compile expr in
+  execute [] [] opcodes []
+;;
+(* Expected output: 1 *)
+
+(* print_ans test3;; *)
+
+(* Test 4: Pair *)
+let test4 =
+  let expr = Pair(N(1), B(true)) in
+  let opcodes = compile expr in
+  execute [] [] opcodes []
+;;
+(* Expected output:  
+Pair:
+1
+true
+*)
+
+(* print_ans test4;; *)
 
