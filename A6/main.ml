@@ -281,4 +281,4 @@ RET
 
 (* Test 9: Error in Case Statement *)
 (* run (Case(App(Abs("x", Add(V("x"), N(2))), N(4)), [((N 7), (B true));((N 5), (B false))]));; *)
-(* Expected output: Error *)
+(* Expected output: Error - No matching value *)
