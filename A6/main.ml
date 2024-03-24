@@ -190,7 +190,16 @@ let rec print_ans a =
   | N n -> print_int n; print_string "\n"
   | B b -> print_string (string_of_bool b); print_string "\n";
   | T l -> print_string "Tuple:\nBegin\n"; List.iter (print_ans) l; print_string "End\n";
-  | VClos (x, c, g) -> print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c;
+  | VClos (x, c, g) -> 
+    (
+      print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c;
+      let rec print_table gamma =
+        match gamma with
+        | [] -> ()
+        | (x, a)::t -> print_string x; print_string " ->\n"; print_ans a; print_table t
+      in
+      print_table g
+    )
 ;;
 
 let run test =
@@ -198,34 +207,35 @@ let run test =
   print_ans (execute [] [] opcodes [])
 ;;
 
-(* Test 1: Simple function application *)
-run (App(Abs("x", Add(V("x"), N(2))), N(3)));;
+(* Test 1: Function application *)
+(* run (App(Abs("x", Add(V("x"), N(2))), N(3)));; *)
 (* Expected output: 5 *)
 
 (* Test 2: Nested function application *)
-run (App(Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))), N(5)));;
+(* run (App(Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))), N(5)));; *)
 (* Expected output: 35 *)
 
 (* Test 3: If-else statement *)
-run (If(Gt(N(5), N(3)), N(1), N(0)));;
+(* run (If(Gt(N(5), N(3)), N(1), N(0)));; *)
 (* Expected output: 1 *)
 
 (* Test 4: Tuple *)
-run (Tuple([N(1); B(true)], 2));;
+(* run (Tuple([N(1); B(true); Eq(N(2), Div(N(3), N(3)))], 3));; *)
 (* Expected output:  
 Tuple:
 Begin
 1
 true
+false
 End
 *)
 
 (* Test 5: Proj *)
-run (Proj(Tuple([N(1); B(true)], 2), 2));;
+(* run (Proj(Tuple([N(1); B(true)], 2), 2));; *)
 (* Expected output: true *)
 
 (* Test 6: Closure *)
-run (Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))));;
+(* run (Abs("x", App(Abs("y", Mul(V("x"), V("y"))), N(7))));; *)
 (* Expected output:
 Closure:
 Argument:
@@ -242,7 +252,7 @@ RET
 *)
 
 (* Test 7: Nested closure *)
-run (Abs("x", App(Abs("y", App(Abs("z", Mul(V("x"), Mul(V("y"), V("z")))), N(7))), N(5))));;
+(* run (Abs("x", App(Abs("y", App(Abs("z", Mul(V("x"), Mul(V("y"), V("z")))), N(7))), N(5))));; *)
 (* Expected output:
 Closure:
 Argument:
@@ -265,7 +275,7 @@ RET
 *)
 
 (* Test 8: Case Statement *)
-run (Case(App(Abs("x", Add(V("x"), N(2))), N(3)), [((N 7), (B true));((N 5), (B false))]));;
+(* run (Case(App(Abs("x", Add(V("x"), N(2))), N(3)), [((N 7), (B true));((N 5), (B false))]));; *)
 (* Expected output: false *)
 
 
