@@ -1,6 +1,3 @@
-(* To add - definitions(if possible)*)
-(* Can make a lexer and parser for better quality *)
-
 type exp = 
 | V of string 
 | Abs of string*exp 
