@@ -250,6 +250,7 @@ RET
 LDNUM 7
 APP
 RET
+Table:
 *)
 
 (* Test 7: Nested closure *)
@@ -273,6 +274,7 @@ RET
 LDNUM 5
 APP
 RET
+Table:
 *)
 
 (* Test 8: Case Statement *)
