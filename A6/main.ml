@@ -193,6 +193,7 @@ let rec print_ans a =
   | VClos (x, c, g) -> 
     (
       print_string "Closure:\nArgument:\n"; print_string x; print_string "\nOpcode List:\n"; print_opcode_list c;
+      print_string "Table:\n";
       let rec print_table gamma =
         match gamma with
         | [] -> ()
@@ -282,3 +283,23 @@ RET
 (* Test 9: Error in Case Statement *)
 (* run (Case(App(Abs("x", Add(V("x"), N(2))), N(4)), [((N 7), (B true));((N 5), (B false))]));; *)
 (* Expected output: Error - No matching value *)
+
+(* Test 10: Application of function with multiple arguments *)
+(* run (App(App(Abs("x", Abs("y", Add(V("x"), V("y")))), N(3)), N(4)));; *)
+(* Expected output: 7 *)
+
+(* Test 11: Partial application of function with multiple arguments *)
+(* run (App(Abs("x", Abs("y", Add(V("x"), V("y")))), N(3)));; *)
+(* Expected output:
+Closure:
+Argument:
+y
+Opcode List:
+LOOKUP x
+LOOKUP y
+ADD
+RET
+Table:
+x ->
+3
+*)
