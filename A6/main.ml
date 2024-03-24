@@ -267,3 +267,8 @@ RET
 (* Test 8: Case Statement *)
 run (Case(App(Abs("x", Add(V("x"), N(2))), N(3)), [((N 7), (B true));((N 5), (B false))]));;
 (* Expected output: false *)
+
+
+(* Test 9: Error in Case Statement *)
+(* run (Case(App(Abs("x", Add(V("x"), N(2))), N(4)), [((N 7), (B true));((N 5), (B false))]));; *)
+(* Expected output: Error *)
