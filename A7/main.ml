@@ -25,6 +25,10 @@ and table = (string * clos) list
 let formclos (e:exp) :clos = Clos(e,[])
 ;;
 
+let get_focus c =
+  match c with
+  | c, _ -> c
+
 let rec krivine (focus:clos) (stack:(clos list)) =
 match focus with 
 | Clos(V x, g) -> krivine (try List.assoc x g with Not_found -> failwith "Variable not in gamma") stack
@@ -147,14 +151,8 @@ match e with
 | _ -> failwith "Invalid exp"
 ;;
 
-let cbn (e:exp) :exp =
-match krivine (formclos e) [] with
-| cl, _ -> eval (unpack cl)
+let cbn (e:exp) :exp = eval (unpack (get_focus (krivine (formclos e) [])))
 ;; 
-
-let get_focus c =
-  match c with
-  | c, _ -> c
 
 let rec print_spaces (n:int) =
   if n > 0 then (print_string " "; print_spaces (n-1))
@@ -189,27 +187,44 @@ let rec print_exp (indent:int) (e:exp) =
                   print_spaces (indent+2); print_string "Match with:\n"; print_exp (indent+2) e;
                   List.iter (fun (a, b) -> print_spaces (indent+2); print_string "C:\n"; print_exp (indent+4) a; 
                   print_spaces (indent+2); print_string "E:\n"; print_exp (indent+4) b) l
-  | _ -> ()
+  | Abs(x, e) -> print_spaces indent; print_string "Abstraction:\n"; print_spaces indent; print_string "Parameter "; print_string x; print_newline();
+                 print_spaces indent; print_string "Body:\n"; print_exp (indent+2) e
+  | App(e1, e2) -> print_spaces indent; print_string "Application:\n"; print_exp (indent+2) e1; print_exp (indent+2) e2
 ;;
 
 let rec print_clos (indent:int) (c:clos) =
   match c with
   | Clos(e, g) -> print_spaces indent; print_string "Closure:\n"; 
-                  print_spaces (indent+2); print_string "Expression:\n"; print_exp (indent+2) e;
+                  print_spaces (indent+2); print_string "Expression:\n"; print_exp (indent+4) e;
                   print_spaces (indent+2); print_string "Gamma:\n";
-                  List.iter (fun (x, cl) -> print_spaces (indent+4); print_string x; print_string "->\n"; print_clos (indent+6) cl) g
+                  if List.length g = 0 then (print_spaces (indent+4); print_string "Empty\n")
+                  else List.iter (fun (x, cl) -> print_spaces (indent+4); print_string x; print_string "->\n"; print_clos (indent+6) cl) g
+;;
 
-let exp1 = App(Abs("x", N 3), Div(N 2, N 0));;
+(* let exp1 = App(Abs("x", N 3), Div(N 2, N 0));;
 print_clos 0 (formclos exp1);; 
 print_clos 0 (get_focus (krivine (formclos exp1) []));;
-print_exp 0 (cbn exp1) ;;
+print_exp 0 (cbn exp1) ;; *)
 
-let exp2 = Proj(Tuple([Tuple([], 0); (N 1)], 2), 1);;
+(* let exp2 = Proj(Tuple([Tuple([], 0); (N 1)], 2), 1);;
 print_clos 0 (formclos exp2);;
 print_clos 0 (get_focus (krivine (formclos exp2) []));;
-print_exp 0 (cbn exp2) ;;
+print_exp 0 (cbn exp2) ;; *)
 
-let exp3 = App(App(Abs("x", Abs("y", (Add(V "y", N 2)))), Div(N 4, N 0)), N 5);;
-print_clos 0 (formclos exp1);;
+(* let exp3 = App(App(Abs("x", Abs("y", (Add(V "y", N 2)))), Div(N 4, N 0)), N 5);;
+print_clos 0 (formclos exp3);;
 print_clos 0 (get_focus (krivine (formclos exp3) []));;
-print_exp 0 (cbn exp3) ;;
+print_exp 0 (cbn exp3) ;; *)
+
+(* let exp4 = App(Abs("x", Mul(V "x", N 0)), Div(N 7, N 0));;
+print_clos 0 (formclos exp4);;
+print_clos 0 (get_focus (krivine (formclos exp4) []));;
+print_exp 0 (cbn exp4) ;; *)
+
+(* let exp5 = Abs("x", Mul(V "x", N 0));;
+print_clos 0 (formclos exp5);;
+print_clos 0 (get_focus (krivine (formclos exp5) []));;
+print_exp 0 (cbn exp5) ;; *)
+
+(* let exp6 = V "x";;
+print_clos 0 (get_focus (krivine (Clos(exp6, [("x", Clos(App(Abs("y", N 3), Div(N 2, N 0)), []))])) []));; *)
