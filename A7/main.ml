@@ -213,4 +213,8 @@ print_exp 0 (cbn exp5) ;; *)
 (* let exp6 = V "x";;
 print_clos 0 (get_focus (krivine (Clos(exp6, [("x", Clos(App(Abs("y", N 3), Div(N 2, N 0)), []))])) []));; *)
 
+(* let exp7 = Add(App(Abs("x", Add(V "x", N 3)), N 2), N 5);;
+print_exp 0 (cbn exp7) ;; *)
 
+(* let exp8 = Abs("x", Abs("y", Mul(V "x", V "y")));;
+print_exp 0 (cbn exp8) ;; *)
