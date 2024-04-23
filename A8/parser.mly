@@ -9,7 +9,7 @@
 %token <string> KEYWORD
 %token <string> OP
 %token <string> STRING
-%token Q_DASH
+%token Q_DASH UNDERSCORE FAIL
 %token DOT COMMA COLON_DASH SEMICOLON PIPE
 %token LPAREN RPAREN LSQUARE RSQUARE
 %token EOF
@@ -55,6 +55,7 @@ aflist:
 af:
   | ATOM {Atomicformula (Atom($1), [])}
   | ATOM LPAREN tlist RPAREN {Atomicformula (Atom($1), $3)}
+  | FAIL {Fail}
 
 tlist:
   | term {[$1]}
@@ -63,29 +64,25 @@ tlist:
 term:
   | INT {Int $1}
   | BOOL {Bool $1}
-  | KEYWORD {Keyword $1}
+  | UNDERSCORE {Variable "@"}
+  // | KEYWORD {Keyword $1}
   | IDENT {Variable $1}
   | STRING {String $1}
   | lst { $1 }
   | af { $1 }
 
 lst:
-  | LSQUARE RSQUARE {List []}
-  | LSQUARE term PIPE lst RSQUARE 
-  {
-    match $4 with
-    | List l -> List ($2::l)
-    | _ -> failwith "Parsing Error"
-  }
-  | LSQUARE term PIPE IDENT RSQUARE 
-  {
-    List [ $2; Variable $4 ]
-  }
-  | LSQUARE commalist RSQUARE {List $2}
+  | LSQUARE RSQUARE {Nil}
+  | LSQUARE lst1 RSQUARE {$2}
 
-commalist:
-  | term {[$1]}
-  | term COMMA commalist { $1 :: $3 }
+lst1:
+  | term {List ($1, Nil)}
+  | term COMMA lst1 {List ($1, $3)}
+  | term PIPE term {List ($1, $3)}
+
+// commalist:
+//   | term {List ($1, Nil)}
+//   | term COMMA commalist {List ($1, $3)}
 
 // program:
 //   | clause DOT

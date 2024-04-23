@@ -81,6 +81,11 @@ let rec print_term (t:termtype) =
   | Atomicformula (Atom a, l) -> print_endline a; (List.iter print_term l)
   | Variable x -> print_string "Var "; print_endline x;
   | Atom a -> print_string "Atom "; print_endline a;
+  | Int x -> print_string "Int "; print_endline (string_of_int x);
+  | String x -> print_string "String "; print_endline x;
+  (* | Keyword x -> print_string "Keyword "; print_endline x; *)
+  | Bool x -> print_string "Bool "; print_endline (string_of_bool x);
+  | List (hd, tl) -> print_string "List "; print_term hd; print_term tl;
   | _ -> ()
 ;;
 
@@ -104,13 +109,17 @@ let print_table table =
 
 let rec unify_atomic_formulae (t1:termtype) (t2:termtype) :(string * termtype) list = 
   match t1, t2 with
+  | Fail, _ | _, Fail -> failwith "NOT_UNIFIABLE"
+  | Variable "@", _ | _, Variable "__@" -> []
   | Int x, Int y -> if x = y then [] else failwith "NOT_UNIFIABLE"
   | String x, String y -> if x = y then [] else failwith "NOT_UNIFIABLE"
   | Atom x, Atom y -> if x = y then [] else failwith "NOT_UNIFIABLE"
-  | Keyword x, Keyword y -> if x = y then [] else failwith "NOT_UNIFIABLE"
+  (* | Keyword x, Keyword y -> if x = y then [] else failwith "NOT_UNIFIABLE" *)
   | Bool x, Bool y -> if x = y then [] else failwith "NOT_UNIFIABLE"
   | Variable x, Variable y -> if x = y then [] else [x, Variable y]
   | Variable x, t | t, Variable x -> [x, t]
+  | List(hd1, tl1), List(hd2, tl2) -> (unify_atomic_formulae hd1 hd2) @ (unify_atomic_formulae tl1 tl2)
+  | Nil, Nil -> []
   | Atomicformula (a1, b1), Atomicformula (a2, b2) -> 
     (
     match a1, a2 with 
@@ -139,15 +148,15 @@ let convert_program_to_list (p:termtype) : ((termtype * (termtype list)) list) =
   | _ -> failwith "Not a program"
     ;;
 
-let rec change_program_variables (p:termtype) :termtype = 
+let rec change_program_variables p :termtype = 
   match p with
-  | Variable x -> Variable ("__"^x)
-  | Program prog -> Program (List.map change_program_variables prog)
-  | Rule (r, l) -> Rule ((change_program_variables r), (List.map change_program_variables l))
-  | Clause c -> Clause (change_program_variables c)
-  | Fact c -> Fact (change_program_variables c)
+  | Variable x -> Variable ("_"^x)
   | Atomicformula (a, l) -> Atomicformula (a, (List.map change_program_variables l))
+  | List (hd, tl) -> List (change_program_variables hd, change_program_variables tl)
   | _ -> p
+;;
+
+let rec change_variables_for_list lst = List.map (fun (r, l) -> ((change_program_variables r), (List.map change_program_variables l))) lst
 ;;
 
 let convert_goal_to_list (g:termtype) = 
@@ -184,26 +193,55 @@ let compose sigma1 sigma2 =
   List.map (fun x -> (x, subst (subst_helper sigma2) (subst (subst_helper sigma1) (Variable x)))) all_vars
 ;;
 
+let rec give_vars t =
+  match t with 
+  | Variable x -> [x]
+  | Atomicformula (Atom a, l) -> List.flatten (List.map give_vars l)
+  | List (hd, tl) -> (give_vars hd) @ (give_vars tl)
+  | _ -> []
+
+let rec af_equal t1 t2 = 
+  match t1, t2 with
+  | Atomicformula (a1, l1), Atomicformula (a2, l2) ->
+    if a1 = a2 then List.fold_left (&&) true (List.map2 (fun x y -> af_equal x y) l1 l2)
+    else false
+  | List(hd1, tl1), List(hd2, tl2) -> (af_equal hd1 hd2) && (af_equal tl1 tl2)
+  | Int x, Int y -> if x = y then true else false
+  | String x, String y -> if x = y then true else false
+  | Atom x, Atom y -> if x = y then true else false
+  | Bool x, Bool y -> if x = y then true else false
+  | _, _ -> false
+
+let check_var_in_af x t = 
+  let vars = give_vars t in
+  List.mem x vars
+
+let check_var_in_list x t =
+  let vars = give_vars t in
+  List.mem x vars
+
 let rec solve_goal s (goal:termtype list) (prog) :(bool * ((string * termtype) list)) =
   match goal with
   | [] -> true, s
   | g :: gs -> 
     (
+      let newprog = change_variables_for_list prog in
       let rec run_on_prog g prg =
         match prg with 
         | (r, l) :: ps ->
-          (* print_table s;
+          print_table s;
           print_term r;
-          print_term g; *)
+          print_term g;
           (
             try
               let subs = unify_atomic_formulae g r in
-              (* print_table subs; *)
+              print_endline "In try block";
+              print_table subs;
               let newgoal = List.map (subst (subst_helper subs)) (l@gs) in
               let newsubs = compose s subs in
               (* print_table newsubs; *)
               (* print_int (List.length newgoal); print_endline ""; *)
-              let ans, finalsubs = solve_goal newsubs newgoal prog in
+              let ans, finalsubs = solve_goal newsubs newgoal newprog in
               (* print_table finalsubs; *)
               if ans then true, finalsubs
               else run_on_prog g ps
@@ -247,10 +285,13 @@ let main =
   let goalbuf = Lexing.from_channel goal in
   let program_tree = apply_on_input lexbuf in
   let goal_tree = apply_on_input goalbuf in
-  let modified_program = change_program_variables program_tree in
-  let p = convert_program_to_list modified_program in
+  (* let modified_program = change_program_variables program_tree in *)
+  let p = change_variables_for_list (convert_program_to_list program_tree) in
   let g = convert_goal_to_list goal_tree in
-  modified_program
+  (* unify_atomic_formulae (List.nth g 0) (fst (List.nth p 0)) *)
+  p
+  (* unify_atomic_formulae (List.nth g 0) (fst (List.nth p 0)) *)
+  (* solve_goal [] g p *)
   (* let b,s = solve_goal [] g p in
   print_ans b s *)
   (* check_program (List.nth g 0) p *)

@@ -7,6 +7,8 @@ type token =
   | OP of (string)
   | STRING of (string)
   | Q_DASH
+  | UNDERSCORE
+  | FAIL
   | DOT
   | COMMA
   | COLON_DASH

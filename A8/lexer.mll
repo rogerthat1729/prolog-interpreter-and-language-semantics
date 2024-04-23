@@ -5,7 +5,6 @@
     exception Error of char
 }
 
-let keyword = ("fail"|"!"|"_")
 let operator = ("is"|"+"|"-"|"*"|"/"|"="|"<"|">")
 
 rule token = parse
@@ -25,8 +24,10 @@ rule token = parse
         { PIPE }
     | [';']
         { SEMICOLON }
-    | keyword as lxm
-        { KEYWORD lxm}
+    | ['_']
+        { UNDERSCORE }
+    | "fail"
+        { FAIL }
     | operator as lxm
         { OP lxm }
    | ['0'-'9']+ as lxm
