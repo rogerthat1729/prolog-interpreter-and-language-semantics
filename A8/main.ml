@@ -71,10 +71,11 @@ let rec unify_atomic_formulae (t1:termtype) (t2:termtype) :(string * termtype) l
   match t1, t2 with
   | Fail, _ | _, Fail -> failwith "NOT_UNIFIABLE"
   | Nil, Nil -> []
+  | Bool true, _ | _, Bool true-> []
+  | Bool false, _ | _, Bool false -> failwith "NOT_UNIFIABLE"
   | Int x, Int y -> if x = y then [] else failwith "NOT_UNIFIABLE"
   | String x, String y -> if x = y then [] else failwith "NOT_UNIFIABLE"
   | Atom x, Atom y -> if x = y then [] else failwith "NOT_UNIFIABLE"
-  | Bool x, Bool y -> if x = y then [] else failwith "NOT_UNIFIABLE"
   | Variable x, Variable y -> if x = y then [] else [x, Variable y]
   | Variable x, t | t, Variable x ->
     if String.contains x '@' then []
@@ -141,43 +142,86 @@ let convert_goal_to_list (g:termtype) =
   | _ -> failwith "Not a goal"
   ;;
 
-let rec solve_goal s (goal:termtype list) (prog) itr :(bool * ((string * termtype) list))  =
-  if itr < 1000 then
-    (
+  let evaluate_expression (e:termtype) = 
+    match e with 
+    | Vector("=", l) -> 
+      (
+        try 
+          let sigma = unify_atomic_formulae (List.nth l 0) (List.nth l 1) in
+          (* print_table sigma;
+          print_term (subst (subst_helper sigma) e); *)
+          (Bool true), sigma
+        with 
+        | Failure msg -> (Bool false), []
+      )
+    | Vector("=/=", l) ->
+      (
+        try
+          let sigma = unify_atomic_formulae (List.nth l 0) (List.nth l 1) in
+          (Bool false), []
+        with 
+        | Failure msg -> (Bool true), []
+      )
+    | Vector (">", l) ->
+      (
+        match (List.nth l 0), (List.nth l 1) with 
+        | Int n1, Int n2 -> Bool (n1 > n2), []
+        | _ -> Bool false, []
+      )
+    | Vector ("<", l) ->
+      (
+        match (List.nth l 0), (List.nth l 1) with 
+        | Int n1, Int n2 -> (Bool (n1 < n2)), []
+        | _ -> (Bool false), []
+      )
+    | _ -> e, []
+
+let rec solve_goal s (goal:termtype list) (prog):(bool * ((string * termtype) list))  =
   match goal with
   | [] -> true, s
-  | g :: gs -> 
+  | g1 :: gs -> 
     (
       let newprog = change_variables_for_list prog in
-      let rec run_on_prog g prg =
+      let rec run_on_prog gl prg =
+        let g, eval_subs = evaluate_expression gl in
+        (* print_table eval_subs; *)
+        match g with 
+        | Bool true -> solve_goal (compose s eval_subs) gs newprog 
+        | Bool false -> false, []
+        | _ ->
+          (
         match prg with 
         | (r, l) :: ps ->
+          (
           (* print_table s;
           print_term r;
           print_term g; *)
-          (
             try
               let subs = unify_atomic_formulae g r in
               (* print_endline "In try block";
-              print_table subs; *)
+              print_table subs;
+              *)
+              (* print_endline "Printing goals..."; *)
               let newgoal = List.map (subst (subst_helper subs)) (l@gs) in
-              let newsubs = compose s subs in
+              (* List.iter print_term newgoal;
+              print_endline "Goals over..."; *)
+              let news = compose s eval_subs in
+              let newsubs = compose news subs in
               (* print_table newsubs; *)
               (* print_int (List.length newgoal); print_endline ""; *)
-              let ans, finalsubs = solve_goal newsubs newgoal newprog (itr+1) in
+              let ans, finalsubs = solve_goal newsubs newgoal newprog in
               (* print_endline "Final sub";
               print_table finalsubs; *)
               if ans then true, finalsubs
-              else run_on_prog g ps
+              else run_on_prog gl ps
             with 
-            | Failure msg -> run_on_prog g ps
-          )
+            | Failure msg -> run_on_prog gl ps
+        )
         | _ -> false, []
+          )
             in
-        run_on_prog g prog
+        run_on_prog g1 prog
     )
-    )
-          else false, []
       ;;
 
 let apply_on_input buf = 
@@ -205,7 +249,35 @@ let print_ans (b:bool) s =
   | false -> print_endline "false.\n"
     ;;
 
+let rec read_goal () =
+  print_string "Write your query: ";
+  flush stdout;
+  try
+    let line = input_line stdin in
+    Some line
+  with
+  | End_of_file -> None
+
+  let rec process_goal program =
+  match read_goal () with
+  | Some goal ->
+      let goalbuf = Lexing.from_string goal in
+      let goal_tree = apply_on_input goalbuf in
+      let g = convert_goal_to_list goal_tree in
+      let b, s = solve_goal [] g program in
+      print_ans b s;
+      process_goal program
+  | None -> ()
+
 let main =
+  let inp = open_in "input.txt" in
+  let lexbuf = Lexing.from_channel inp in
+  let program_tree = apply_on_input lexbuf in
+  let p = change_variables_for_list (convert_program_to_list program_tree) in
+  process_goal p
+    
+
+(* let main =
   let inp = open_in "input.txt" in
   let goal = open_in "goal.txt" in
   let lexbuf = Lexing.from_channel inp in
@@ -221,12 +293,12 @@ let main =
     (* print_term (List.nth g 0);
   print_term (fst (List.nth p 1)); *)
   (* fst (List.nth p 1) *)
-
+  (* p *)
   (* unify_atomic_formulae (Variable "X") (Vector ("_LST", [Int 2; Variable "_@"])) *)
   (* unify_atomic_formulae (List.nth g 0) (fst (List.nth p 1)) *)
   (* unify_atomic_formulae (List.nth g 0) (fst (List.nth p 0)) *)
   (* solve_goal [] g p *)
-  let b,s = solve_goal [] g p 0 in
+  let b,s = solve_goal [] g p in
   print_ans b s
   (* let tab = compose [("X", Atom "a"); ("_X", Atom "a"); ("_Y", Atom "a"); ("_Z", Atom "b")] [("___X", Atom "b"); ("___Y", Atom "a")] in *)
   (* print_table tab; *)
@@ -239,17 +311,19 @@ let main =
   (* print_term (change_goal_tree program_tree) 0; *)
   (* List.iter (fun (a, b) -> print_endline a; print_term b 0) (unify (change_goal_tree goal_tree) (change_goal_tree program_tree)) *)
   (* print_term res 0 *)
-;;
+;; *)
 
 (* 
+append([ ], L, L).
+append([X|R], L, [X|Z]) :- append(R, L, Z).
 
-harry(lily, false) :- james(Snape, Tom), sirius(ron(2), Hermione), Voldemort is 2.
-frodo(Bilbo).
-darth(vader) :- lightsaber(true).
-meal(X) :- food(23).
-popcorn(Movie) :- !.
+rev([], []).
+rev([H|T], R) :- rev(T, R1), append(R1, [H|[]], R).
+
+darth(vader).
+food(lol).
+meal(X) :- food(X).
 study(_) :- fail.
-x(a(X), b(X), c(d(X)), e(Y)) :- N is M+2, N1 is M1/3.
-?- a(b, c), S is "hello, world!".
+x(a(X), b(X), c(d(X)), e(Y)) :- fail.
 
 *)

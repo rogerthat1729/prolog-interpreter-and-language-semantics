@@ -7,6 +7,7 @@ clean: run
 	@rm -r parser.ml
 	@rm -r parser.mli
 	@rm -r lexer.ml
+	@rm -r main
 
 run:
 	@echo "Building parse tree ... \n"

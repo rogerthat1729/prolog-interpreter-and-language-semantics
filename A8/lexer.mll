@@ -5,7 +5,7 @@
     exception Error of char
 }
 
-let operator = ("is"|"+"|"-"|"*"|"/"|"="|"<"|">")
+let operator = ("="|"<"|">"|"=/=")
 
 rule token = parse
      [' ' '\t']

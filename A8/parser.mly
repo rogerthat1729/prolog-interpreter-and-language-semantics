@@ -54,15 +54,14 @@ aflist:
 
 af:
   | ATOM {Vector($1, [])}
-  | ATOM LPAREN tlist RPAREN {Vector($1,  $3)}
+  | ATOM LPAREN tlist RPAREN {Vector($1, $3)}
   | FAIL {Fail}
+  | term OP term {Vector($2, [$1;$3])}
 
 tlist:
   | term {[$1]}
   | term COMMA tlist 
-  { 
-    $1 :: $3
-  }
+  { $1 :: $3 }
 
 term:
   | INT {Int $1}

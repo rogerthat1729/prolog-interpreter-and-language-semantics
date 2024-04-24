@@ -1,11 +1,1 @@
-append([ ], L, L).
-append([X|R], L, [X|Z]) :- append(R, L, Z).
-
-rev([], []).
-rev([H|T], R) :- rev(T, R1), append(R1, [H|[]], R).
-
-darth(vader).
-food(lol).
-meal(X) :- food(X).
-study(_) :- fail.
-x(a(X), b(X), c(d(X)), e(Y)) :- fail.
+a(X, Y) :- X = Y.
