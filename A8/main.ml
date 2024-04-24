@@ -280,6 +280,7 @@ let main =
   process_goal p
 
 (* 
+
 append([ ], L, L).
 append([X|R], L, [X|Z]) :- append(R, L, Z).
 
@@ -290,7 +291,7 @@ darth(vader).
 food(lol).
 meal(X) :- food(X).
 study(_).
-x(a(X), b(X), c(d(X)), e(Y)).
+x(a(X), b(X), c(d(X)), e(Y)) :- fail.
 
 a(X, Y) :- X = Y.
 b(X, Y) :- X =/= Y.
@@ -302,11 +303,10 @@ edge(b, c).
 edge(c, d).
 edge(c,a).
 edge(d, e).
-path(X, X).
 path(X, Y) :- edge(X, Y).
 path(X, Y) :- edge(X, Z), path(Z, Y).
 
-mem(X, ret(X)).
+r(X, ret(X)).
 mem(_, []) :- fail.
 mem(X, [X|_]).
 mem(X, [_|T]) :- mem(X, T).
@@ -314,20 +314,37 @@ mem(X, [_|T]) :- mem(X, T).
 red(apple, ball).
 hot(fire, ball).
 
-mem(X, Y) :- red(X, Z), hot(Y, Z).
+abc(X, Y) :- red(X, Z), hot(Y, Z).
+
+---------------------------------------------------------------------------------------------------
 
 ?- rev([1, 2, 3], X).
+-> X = [3|[2|[1|]|]|]
 ?- rev([1, 2, 3], [3, 2, 1]).
+-> true.
 ?- append([1, 2, 3], [4, 5, 6], X).
+X = [1|[2|[3|[4|[5|[6|]|]|]|]|]|]
 ?- append([1, 2, 3], X, [1, 2, 3, 4, 5, 6]).
+-> X = [4|[5|[6|]|]|]
 ?- a(1, 1).
+-> true.
 ?- a(X, 2).
+-> X = 2
 ?- b(1, 2).
+-> true.
 ?- b(1, 1).
+-> false.
 ?- g(2, 1).
+-> true.
 ?- g(1, 2).
+-> false.
 ?- l(1, 2).
+-> true.
 ?- l(2, 2).
+-> false.
 ?- study(1).
+-> true.
 ?- meal(lol).
+-> true.
+
 *)

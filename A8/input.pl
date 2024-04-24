@@ -20,11 +20,10 @@ edge(b, c).
 edge(c, d).
 edge(c,a).
 edge(d, e).
-path(X, X).
 path(X, Y) :- edge(X, Y).
 path(X, Y) :- edge(X, Z), path(Z, Y).
 
-mem(X, ret(X)).
+r(X, ret(X)).
 mem(_, []) :- fail.
 mem(X, [X|_]).
 mem(X, [_|T]) :- mem(X, T).
@@ -32,4 +31,4 @@ mem(X, [_|T]) :- mem(X, T).
 red(apple, ball).
 hot(fire, ball).
 
-mem(X, Y) :- red(X, Z), hot(Y, Z).
+abc(X, Y) :- red(X, Z), hot(Y, Z).
