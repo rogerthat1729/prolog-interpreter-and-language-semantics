@@ -1,5 +1,6 @@
 open Printf
 open Types
+
 let rec print_term (t:termtype) = 
   match t with 
   | Vector (s, l) -> 
@@ -277,43 +278,6 @@ let main =
   let program_tree = apply_on_input lexbuf in
   let p = change_variables_for_list (convert_program_to_list program_tree) in
   process_goal p
-    
-
-(* let main =
-  let inp = open_in "input.txt" in
-  let goal = open_in "goal.txt" in
-  let lexbuf = Lexing.from_channel inp in
-  let goalbuf = Lexing.from_channel goal in
-  let program_tree = apply_on_input lexbuf in
-  let goal_tree = apply_on_input goalbuf in
-  (* compose [("X", Variable "Y"); ("Z", Vector("mem", [Variable "X"]))] ["Y", Int 1] *)
-  (* let modified_program = change_program_variables program_tree in *)
-  let p = change_variables_for_list (convert_program_to_list program_tree) in
-  let g = convert_goal_to_list goal_tree in
-  (* fst (List.nth p 1) *)
-  (* List.nth g 0 *)
-    (* print_term (List.nth g 0);
-  print_term (fst (List.nth p 1)); *)
-  (* fst (List.nth p 1) *)
-  (* p *)
-  (* unify_atomic_formulae (Variable "X") (Vector ("_LST", [Int 2; Variable "_@"])) *)
-  (* unify_atomic_formulae (List.nth g 0) (fst (List.nth p 1)) *)
-  (* unify_atomic_formulae (List.nth g 0) (fst (List.nth p 0)) *)
-  (* solve_goal [] g p *)
-  let b,s = solve_goal [] g p in
-  print_ans b s
-  (* let tab = compose [("X", Atom "a"); ("_X", Atom "a"); ("_Y", Atom "a"); ("_Z", Atom "b")] [("___X", Atom "b"); ("___Y", Atom "a")] in *)
-  (* print_table tab; *)
-  (* check_program (List.nth g 0) p *)
-  (* check_unifiable (Atomicformula (Atom "mother", [Variable "X"; Variable "Y"])) (Atomicformula (Atom "mother", [Variable "A"; Variable "B"])) *)
-  (* List.map (fun gl -> check_program gl p) g *)
-  (* print_term program_tree 0 *)
-  (* let goal_tree = (Parser.main Lexer.token goalbuf) in
-  List.iter (fun g -> print_term g 0) (change_goal_tree goal_tree); *)
-  (* print_term (change_goal_tree program_tree) 0; *)
-  (* List.iter (fun (a, b) -> print_endline a; print_term b 0) (unify (change_goal_tree goal_tree) (change_goal_tree program_tree)) *)
-  (* print_term res 0 *)
-;; *)
 
 (* 
 append([ ], L, L).
@@ -325,11 +289,32 @@ rev([H|T], R) :- rev(T, R1), append(R1, [H|[]], R).
 darth(vader).
 food(lol).
 meal(X) :- food(X).
-study(_) :- fail.
-x(a(X), b(X), c(d(X)), e(Y)) :- fail.
+study(_).
+x(a(X), b(X), c(d(X)), e(Y)).
 
 a(X, Y) :- X = Y.
 b(X, Y) :- X =/= Y.
+g(X, Y) :- X > Y.
+l(X, Y) :- X < Y.
+
+edge(a, b).
+edge(b, c).
+edge(c, d).
+edge(c,a).
+edge(d, e).
+path(X, X).
+path(X, Y) :- edge(X, Y).
+path(X, Y) :- edge(X, Z), path(Z, Y).
+
+mem(X, ret(X)).
+mem(_, []) :- fail.
+mem(X, [X|_]).
+mem(X, [_|T]) :- mem(X, T).
+
+red(apple, ball).
+hot(fire, ball).
+
+mem(X, Y) :- red(X, Z), hot(Y, Z).
 
 ?- rev([1, 2, 3], X).
 ?- rev([1, 2, 3], [3, 2, 1]).
@@ -339,6 +324,10 @@ b(X, Y) :- X =/= Y.
 ?- a(X, 2).
 ?- b(1, 2).
 ?- b(1, 1).
+?- g(2, 1).
+?- g(1, 2).
+?- l(1, 2).
+?- l(2, 2).
 ?- study(1).
 ?- meal(lol).
 *)
