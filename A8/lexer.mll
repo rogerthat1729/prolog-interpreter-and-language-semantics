@@ -48,6 +48,8 @@ rule token = parse
         { LSQUARE }
     | [']']
         { RSQUARE }
+    | '#'[^'\n']*'\n'
+        { token lexbuf }
    | eof
        { EOF }
    | _ as s

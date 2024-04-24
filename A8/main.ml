@@ -5,15 +5,17 @@ let rec print_term (t:termtype) =
   | Vector (s, l) -> 
     (
       match s with 
-      | "_LST" -> print_string "["; (List.iter 
+      | "_LST" -> (print_string "["; (List.iter 
       (fun t -> match t with 
       | Variable x -> if String.contains x '@' then print_string "_" else print_string x
       | Nil -> ()
       | _ -> print_term t; print_string "|"
-      ) l); print_string "]";
-      | _ -> if List.length l > 0 then 
-        (print_string "Atomic Formula:\n"; print_endline s; print_string "Arguments:\n"; (List.iter (fun ter -> print_term ter; print_string ",") l); print_endline ""; )
-            else print_string "Atom "; print_string s;
+      ) l); print_string "]";)
+      | _ -> 
+        if List.length l > 0 then 
+        (print_string "AtomicFormula("; print_string s; print_string ", ";
+       print_string "("; (List.iter (fun ter -> print_term ter; print_string ",") l); print_string "))"; )
+        else (print_string "Atom "; print_string s;)
     )
   | Variable x -> print_string "Var "; print_string x
   | Atom a -> print_string a;
@@ -26,7 +28,7 @@ let rec print_term (t:termtype) =
 ;;
 
 let print_table table =
-  print_string "\nTable:\n";
+  print_string "Table:\n";
   List.iter (fun (x, t) -> (print_string x; print_string " = "; print_term t; print_string ", ";)) table;
   print_endline ""
 ;;
@@ -243,7 +245,7 @@ let print_ans (b:bool) s =
     (
       let goal_vars = List.filter (fun (x, t) -> not (String.contains x '_')) s in
       (* print_table goal_vars; *)
-      if List.length goal_vars = 0 then print_string "true.\n"
+      if List.length goal_vars = 0 then print_endline "true.\n"
       else print_table goal_vars
     )
   | false -> print_endline "false.\n"
@@ -270,7 +272,7 @@ let rec read_goal () =
   | None -> ()
 
 let main =
-  let inp = open_in "input.txt" in
+  let inp = open_in "input.pl" in
   let lexbuf = Lexing.from_channel inp in
   let program_tree = apply_on_input lexbuf in
   let p = change_variables_for_list (convert_program_to_list program_tree) in
@@ -326,4 +328,17 @@ meal(X) :- food(X).
 study(_) :- fail.
 x(a(X), b(X), c(d(X)), e(Y)) :- fail.
 
+a(X, Y) :- X = Y.
+b(X, Y) :- X =/= Y.
+
+?- rev([1, 2, 3], X).
+?- rev([1, 2, 3], [3, 2, 1]).
+?- append([1, 2, 3], [4, 5, 6], X).
+?- append([1, 2, 3], X, [1, 2, 3, 4, 5, 6]).
+?- a(1, 1).
+?- a(X, 2).
+?- b(1, 2).
+?- b(1, 1).
+?- study(1).
+?- meal(lol).
 *)
