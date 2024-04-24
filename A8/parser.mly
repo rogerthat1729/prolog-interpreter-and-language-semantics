@@ -53,19 +53,21 @@ aflist:
   | af COMMA aflist { $1 :: $3 }
 
 af:
-  | ATOM {Atomicformula (Atom($1), [])}
-  | ATOM LPAREN tlist RPAREN {Atomicformula (Atom($1), $3)}
+  | ATOM {Vector($1, [])}
+  | ATOM LPAREN tlist RPAREN {Vector($1,  $3)}
   | FAIL {Fail}
 
 tlist:
   | term {[$1]}
-  | term COMMA tlist { $1 :: $3 }
+  | term COMMA tlist 
+  { 
+    $1 :: $3
+  }
 
 term:
   | INT {Int $1}
   | BOOL {Bool $1}
   | UNDERSCORE {Variable "@"}
-  // | KEYWORD {Keyword $1}
   | IDENT {Variable $1}
   | STRING {String $1}
   | lst { $1 }
@@ -76,9 +78,9 @@ lst:
   | LSQUARE lst1 RSQUARE {$2}
 
 lst1:
-  | term {List ($1, Nil)}
-  | term COMMA lst1 {List ($1, $3)}
-  | term PIPE term {List ($1, $3)}
+  | term {Vector ("_LST", [$1; Nil])}
+  | term COMMA lst1 {Vector ("_LST", [$1; $3])}
+  | term PIPE term {Vector ("_LST", [$1; $3])}
 
 // commalist:
 //   | term {List ($1, Nil)}
