@@ -32,3 +32,7 @@ red(apple, ball).
 hot(fire, ball).
 
 abc(X, Y) :- red(X, Z), hot(Y, Z).
+
+min(X, X, X).
+min(X, Y, Z) :- X>Y, Z=Y.
+min(X, Y, Z) :- X<Y, Z=X.
